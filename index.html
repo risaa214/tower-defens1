@@ -318,21 +318,45 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
-        // --- AUDIO SYSTEM ---
+        // --- AUDIO SYSTEM (iOS Optimized) ---
         const AudioSys = {
             ctx: null,
             muted: false,
             init: function() {
-                if (!this.ctx && !this.muted) {
+                if (this.muted) return;
+                
+                if (!this.ctx) {
                     const AudioContext = window.AudioContext || window.webkitAudioContext;
                     this.ctx = new AudioContext();
                 }
-                if (this.ctx && this.ctx.state === 'suspended') {
-                    this.ctx.resume();
+                
+                // Always try to resume context on init/interaction
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume().catch(e => console.log(e));
                 }
             },
-            playTone: function(freq, type, duration, vol = 0.1) {
+            
+            // Critical for iOS: Play a silent buffer to fully unlock the audio engine
+            unlock: function() {
+                if (!this.ctx || this.muted) return;
+                try {
+                    const buffer = this.ctx.createBuffer(1, 1, 22050);
+                    const source = this.ctx.createBufferSource();
+                    source.buffer = buffer;
+                    source.connect(this.ctx.destination);
+                    source.start(0);
+                    
+                    if (this.ctx.state === 'suspended') {
+                        this.ctx.resume();
+                    }
+                } catch(e) {}
+            },
+
+            playTone: function(freq, type, duration, vol = 0.3) { // Increased default volume
                 if (this.muted || !this.ctx) return;
+                // Re-check state just in case
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+
                 try {
                     const osc = this.ctx.createOscillator();
                     const gain = this.ctx.createGain();
@@ -346,17 +370,27 @@
                     osc.stop(this.ctx.currentTime + duration);
                 } catch(e) {}
             },
-            sfxShoot: function() { this.playTone(400 + Math.random()*200, 'square', 0.05, 0.05); },
-            sfxExplode: function() { this.playTone(100, 'sawtooth', 0.2, 0.1); },
-            sfxBuild: function() { this.playTone(880, 'sine', 0.1, 0.1); },
-            sfxZap: function() { this.playTone(100, 'sawtooth', 0.15, 0.05); }
+            sfxShoot: function() { this.playTone(400 + Math.random()*200, 'square', 0.05, 0.2); },
+            sfxExplode: function() { this.playTone(100, 'sawtooth', 0.2, 0.3); },
+            sfxBuild: function() { this.playTone(880, 'sine', 0.1, 0.2); },
+            sfxZap: function() { this.playTone(100, 'sawtooth', 0.15, 0.2); }
         };
 
         function toggleSound() {
             AudioSys.muted = !AudioSys.muted;
             document.getElementById('sound-status').innerText = AudioSys.muted ? "VYP" : "ZAP";
-            if(!AudioSys.muted) AudioSys.init();
+            if(!AudioSys.muted) {
+                AudioSys.init();
+                AudioSys.unlock();
+            }
         }
+        
+        // iOS: Force resume on any global touch
+        window.addEventListener('touchstart', function() {
+            if (AudioSys.ctx && AudioSys.ctx.state === 'suspended' && !AudioSys.muted) {
+                AudioSys.ctx.resume();
+            }
+        }, {passive: true});
 
         // --- GAME CONSTANTS ---
         const GRID_SIZE = 40; 
@@ -414,7 +448,8 @@
         window.addEventListener('resize', resize);
         
         function bootSystem() {
-            AudioSys.init(); // iOS Audio Unlock
+            AudioSys.init(); // iOS Audio Init
+            AudioSys.unlock(); // iOS Audio Unlock Trick
             document.getElementById('start-modal').classList.add('hidden');
             resize();
             initGame(true);
