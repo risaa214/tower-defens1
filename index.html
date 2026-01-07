@@ -2,7 +2,7 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>PCB Defender Mobile</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -14,11 +14,13 @@
             user-select: none;
             -webkit-user-select: none; /* Safari */
             touch-action: none; /* Disable default touch actions */
+            -webkit-tap-highlight-color: transparent; /* iOS tap fix */
         }
         #game-container {
             position: relative;
             display: flex;
             height: 100vh;
+            height: 100dvh; /* Dynamic viewport height for mobile */
             width: 100vw;
             overflow: hidden;
         }
@@ -29,7 +31,7 @@
             display: block;
         }
         
-        /* Sidebar UI - Desktop Default */
+        /* Sidebar UI */
         #sidebar {
             width: 300px;
             background: #0f172a;
@@ -126,9 +128,9 @@
         @keyframes floatUp { to { transform: translateY(-40px); opacity: 0; } }
 
         /* Modals */
-        #modal {
+        #modal, #start-modal {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85);
+            background: rgba(0,0,0,0.9);
             display: flex; align-items: center; justify-content: center;
             z-index: 100;
         }
@@ -140,6 +142,9 @@
             max-width: 90%;
             color: white;
             border-radius: 8px;
+        }
+        #start-modal .modal-content {
+            border-color: #3b82f6;
         }
         .hidden { display: none !important; }
 
@@ -166,26 +171,26 @@
             
             #sidebar { 
                 width: 100%; 
-                height: 220px; /* Fixed height for bottom controls */
+                height: 220px; 
                 min-height: 220px;
                 flex-direction: row; 
                 flex-wrap: nowrap;
-                overflow-x: auto; /* Scroll horizontally */
+                overflow-x: auto; 
                 overflow-y: hidden;
                 border-left: none;
                 border-top: 2px solid #334155;
                 padding: 8px;
                 gap: 8px;
-                order: 2; /* Put sidebar at bottom */
+                order: 2; 
             }
 
             canvas {
-                order: 1; /* Put canvas on top */
+                order: 1; 
                 width: 100%;
                 height: calc(100vh - 220px);
+                height: calc(100dvh - 220px);
             }
 
-            /* Adjust panels for horizontal layout */
             .panel {
                 min-width: 140px;
                 height: 100%;
@@ -196,22 +201,9 @@
                 font-size: 12px;
             }
 
-            #status-panel {
-                min-width: 130px;
-            }
-
-            #tower-panel-container {
-                flex-grow: 1;
-                overflow-x: auto;
-                display: flex;
-                min-width: 200px;
-            }
-
-            #tower-panel {
-                flex-direction: row;
-                height: 100%;
-                gap: 6px;
-            }
+            #status-panel { min-width: 130px; }
+            #tower-panel-container { flex-grow: 1; overflow-x: auto; display: flex; min-width: 200px; }
+            #tower-panel { flex-direction: row; height: 100%; gap: 6px; }
 
             .tower-btn {
                 flex-direction: column;
@@ -224,26 +216,23 @@
                 flex-shrink: 0;
             }
 
-            .tower-icon {
-                margin: 0 0 4px 0;
-                width: 32px; height: 32px;
-            }
-
-            .tower-info .desc { display: none; } /* Hide description to save space */
-            
-            #upgrade-panel {
-                min-width: 140px;
-            }
-            
-            .wave-btn {
-                margin-top: 5px;
-                padding: 8px;
-                font-size: 12px;
-            }
+            .tower-icon { margin: 0 0 4px 0; width: 32px; height: 32px; }
+            .tower-info .desc { display: none; }
+            #upgrade-panel { min-width: 140px; }
+            .wave-btn { margin-top: 5px; padding: 8px; font-size: 12px; }
         }
     </style>
 </head>
 <body>
+
+    <!-- Start Overlay (Required for iOS Audio) -->
+    <div id="start-modal">
+        <div class="modal-content">
+            <h1 class="text-3xl font-bold mb-2 text-blue-400">PCB DEFENDER</h1>
+            <p class="mb-6 text-slate-300 text-sm">Braň procesor před zkratem.</p>
+            <button onclick="bootSystem()" class="bg-blue-600 w-full py-4 rounded font-bold text-white text-xl animate-pulse">SPUSTIT SYSTÉM</button>
+        </div>
+    </div>
 
     <div id="game-container">
         <canvas id="gameCanvas"></canvas>
@@ -338,6 +327,9 @@
                     const AudioContext = window.AudioContext || window.webkitAudioContext;
                     this.ctx = new AudioContext();
                 }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
             },
             playTone: function(freq, type, duration, vol = 0.1) {
                 if (this.muted || !this.ctx) return;
@@ -380,7 +372,7 @@
         let money = 250;
         let lives = 20;
         let wave = 1;
-        let gameActive = true;
+        let gameActive = false; // Wait for boot
         
         let map = [];
         let path = [];
@@ -396,25 +388,40 @@
         let spawnTimer = 0;
 
         // --- INIT & RESIZE ---
+        let lastWidth = 0;
+
         function resize() {
-            // FIX: Use getBoundingClientRect to get exact visible dimensions from CSS
-            // This prevents mismatch between internal canvas size and displayed size on mobile
             const rect = canvas.getBoundingClientRect();
+            
+            // Check if resize is significant enough to warrant a reset (e.g. orientation change)
+            // Small changes (address bar) should just update canvas size but keep game state if possible
+            const isSignificant = Math.abs(rect.width - lastWidth) > 50;
             
             width = rect.width;
             height = rect.height;
+            lastWidth = width;
             
-            // Set internal canvas resolution to match its display size exactly
             canvas.width = width;
             canvas.height = height;
 
-            if(gameActive) initGame(false); 
+            if(gameActive && isSignificant) {
+                // If orientation changed, we must regenerate map
+                initGame(false); 
+            }
+            // If just address bar, we keep running (map might look slightly cropped/extended at bottom but playable)
         }
         
         window.addEventListener('resize', resize);
         
+        function bootSystem() {
+            AudioSys.init(); // iOS Audio Unlock
+            document.getElementById('start-modal').classList.add('hidden');
+            resize();
+            initGame(true);
+            animate();
+        }
+
         function initGame(resetStats = true) {
-            AudioSys.init();
             if(resetStats) {
                 money = 250;
                 lives = 20;
@@ -647,7 +654,7 @@
         function handleInput(clientX, clientY) {
             const rect = canvas.getBoundingClientRect();
             
-            // FIX: Calculate scale factors to handle CSS resizing/stretching
+            // Scaled coords
             const scaleX = canvas.width / rect.width;
             const scaleY = canvas.height / rect.height;
 
@@ -692,8 +699,12 @@
         }
 
         canvas.addEventListener('mousedown', (e) => handleInput(e.clientX, e.clientY));
+        
+        // Prevent default touch actions to stop rubber banding
+        canvas.addEventListener('touchmove', (e) => e.preventDefault(), {passive: false});
+        
         canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // Stop scrolling
+            e.preventDefault(); 
             handleInput(e.touches[0].clientX, e.touches[0].clientY);
         }, {passive: false});
 
@@ -744,26 +755,8 @@
 
         function showFloatText(text, x, y, color) {
             const rect = canvas.getBoundingClientRect();
-            // Need to account for scaling if we use canvas coords, but here we use element coords relative to page
-            // x, y passed here are inside canvas.
-            
-            // Re-calculate screen position from canvas position
-            // We passed x,y as canvas coords in handleInput? No, x,y in handleInput are canvas-space.
-            // But showFloatText is called from handleInput using 'x,y' which are processed?
-            // Wait, previous code passed clientX, clientY directly in some cases?
-            // Let's check handleInput calls: showFloatText("OBSAZENO", x, y, ...)
-            // x,y there are scaled canvas coords. We need to convert back to screen for div positioning.
-            
-            // Correction: The simplest way is to just use mouse event coords for floating text if available,
-            // or reverse project. For simplicity, let's just use the center of the screen or approximate.
-            
-            // Actually, let's just append to game container and use % or just use the passed X/Y assuming 1:1 for now 
-            // since CSS overlay is tricky with canvas scaling.
-            // BETTER FIX: Make float-text a part of canvas drawing? No, HTML is easier.
-            
-            // Let's just fix the call sites in handleInput to pass the original clientX/Y which is easier?
-            // But handleInput modifies x/y. 
-            // Let's use the rect again.
+            // x, y passed here are inside canvas logic (scaled). 
+            // We need to project back to screen coordinates for the DIV.
             
             const scaleX = rect.width / canvas.width;
             const scaleY = rect.height / canvas.height;
@@ -901,9 +894,8 @@
         }
 
         // Boot
+        // Don't auto-init game logic or audio. Wait for start modal.
         resize();
-        initGame(true);
-        animate();
 
     </script>
 </body>
