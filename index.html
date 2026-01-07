@@ -397,23 +397,17 @@
 
         // --- INIT & RESIZE ---
         function resize() {
-            const sidebar = document.getElementById('sidebar');
-            const sidebarHeight = window.innerWidth <= 768 ? 220 : 0;
-            const sidebarWidth = window.innerWidth > 768 ? 300 : 0;
-
-            if(window.innerWidth > 768) {
-                width = window.innerWidth - sidebarWidth;
-                height = window.innerHeight;
-            } else {
-                width = window.innerWidth;
-                height = window.innerHeight - sidebarHeight;
-            }
+            // FIX: Use getBoundingClientRect to get exact visible dimensions from CSS
+            // This prevents mismatch between internal canvas size and displayed size on mobile
+            const rect = canvas.getBoundingClientRect();
             
+            width = rect.width;
+            height = rect.height;
+            
+            // Set internal canvas resolution to match its display size exactly
             canvas.width = width;
             canvas.height = height;
 
-            // Regenerate level on resize to fit screen
-            // In a real app we might scale, but here we rebuild grid
             if(gameActive) initGame(false); 
         }
         
@@ -428,7 +422,7 @@
             }
             gameActive = true;
             enemies = [];
-            towers = []; // Note: Resizing clears towers. Acceptable for prototype.
+            towers = []; 
             projectiles = [];
             particles = [];
             waveActive = false;
@@ -652,8 +646,14 @@
         // --- INPUT HANDLING ---
         function handleInput(clientX, clientY) {
             const rect = canvas.getBoundingClientRect();
-            const x = clientX - rect.left;
-            const y = clientY - rect.top;
+            
+            // FIX: Calculate scale factors to handle CSS resizing/stretching
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            const x = (clientX - rect.left) * scaleX;
+            const y = (clientY - rect.top) * scaleY;
+            
             const c = Math.floor(x / GRID_SIZE);
             const r = Math.floor(y / GRID_SIZE);
 
@@ -744,10 +744,37 @@
 
         function showFloatText(text, x, y, color) {
             const rect = canvas.getBoundingClientRect();
+            // Need to account for scaling if we use canvas coords, but here we use element coords relative to page
+            // x, y passed here are inside canvas.
+            
+            // Re-calculate screen position from canvas position
+            // We passed x,y as canvas coords in handleInput? No, x,y in handleInput are canvas-space.
+            // But showFloatText is called from handleInput using 'x,y' which are processed?
+            // Wait, previous code passed clientX, clientY directly in some cases?
+            // Let's check handleInput calls: showFloatText("OBSAZENO", x, y, ...)
+            // x,y there are scaled canvas coords. We need to convert back to screen for div positioning.
+            
+            // Correction: The simplest way is to just use mouse event coords for floating text if available,
+            // or reverse project. For simplicity, let's just use the center of the screen or approximate.
+            
+            // Actually, let's just append to game container and use % or just use the passed X/Y assuming 1:1 for now 
+            // since CSS overlay is tricky with canvas scaling.
+            // BETTER FIX: Make float-text a part of canvas drawing? No, HTML is easier.
+            
+            // Let's just fix the call sites in handleInput to pass the original clientX/Y which is easier?
+            // But handleInput modifies x/y. 
+            // Let's use the rect again.
+            
+            const scaleX = rect.width / canvas.width;
+            const scaleY = rect.height / canvas.height;
+            
+            const screenX = x * scaleX + rect.left;
+            const screenY = y * scaleY + rect.top;
+
             const el = document.createElement('div');
             el.className = 'float-text';
-            el.style.left = (x + rect.left) + 'px';
-            el.style.top = (y + rect.top) + 'px';
+            el.style.left = screenX + 'px';
+            el.style.top = screenY + 'px';
             el.style.color = color;
             el.innerText = text;
             document.body.appendChild(el);
