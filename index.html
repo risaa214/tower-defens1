@@ -3,176 +3,881 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Jan Novák | Vizitka</title>
+    <title>PCB Defender Mobile</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root {
-            /* Moderní barevná paleta */
-            --primary: #3b82f6; /* Výrazná modrá */
-            --primary-dark: #1d4ed8;
-            --bg-dark: #0f172a; /* Téměř černá pro pozadí */
-            --card-bg: rgba(255, 255, 255, 0.95); /* Mléčné sklo */
-            --text-main: #1e293b;
-            --text-muted: #64748b;
-        }
-
-        * { box-sizing: border-box; }
-
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: var(--bg-dark);
-            background-image: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
             margin: 0;
-            padding: 20px;
-            color: var(--text-main);
+            overflow: hidden;
+            background-color: #1e293b;
+            font-family: 'Segoe UI', monospace;
+            user-select: none;
+            -webkit-user-select: none; /* Safari */
+            touch-action: none; /* Disable default touch actions */
         }
-
-        .card {
-            background: var(--card-bg);
-            width: 100%;
-            max-width: 400px;
-            border-radius: 24px;
-            overflow: hidden; /* Aby banner nepřetékal */
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(10px); /* Efekt rozostření pozadí za kartou */
-        }
-
-        /* Banner za profilovkou - zatím jen barva, později fotka */
-        .card-header {
-            height: 120px;
-            background: linear-gradient(45deg, var(--primary), #60a5fa);
-        }
-
-        .card-body {
-            padding: 0 24px 30px 24px;
-            text-align: center;
+        #game-container {
             position: relative;
-        }
-
-        .profile-wrapper {
-            margin-top: -60px; /* Vytáhne fotku nahoru do banneru */
-            margin-bottom: 16px;
-            display: inline-block;
-            position: relative;
-        }
-
-        /* Placeholder pro fotku - nahradíme později <img> tagem */
-        .profile-img-placeholder {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            background: #e2e8f0; /* Šedá placeholder barva */
-            background-image: url('https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'); /* Dočasný avatar */
-            background-size: cover;
-            border: 4px solid var(--card-bg);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-
-        h1 {
-            margin: 0;
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: var(--text-main);
-        }
-
-        .bio {
-            color: var(--text-muted);
-            margin: 8px 0 24px 0;
-            font-size: 1rem;
-            font-weight: 500;
-        }
-
-        /* Stylizace tlačítek s ikonami */
-        .actions {
             display: flex;
-            flex-direction: column;
-            gap: 12px;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
         }
-
-        .btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            padding: 14px;
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            text-decoration: none;
-            color: var(--text-main);
-            font-weight: 600;
-            transition: all 0.2s ease;
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-        }
-
-        .btn:hover {
-            background: #f8fafc;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        canvas {
+            background-color: #0f4c3a; /* Dark Green PCB color */
+            cursor: crosshair;
+            flex-grow: 1;
+            display: block;
         }
         
-        /* SVG ikony - nastavení velikosti */
-        .btn svg { width: 20px; height: 20px; stroke-width: 2; }
+        /* Sidebar UI - Desktop Default */
+        #sidebar {
+            width: 300px;
+            background: #0f172a;
+            border-left: 2px solid #334155;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            color: #e2e8f0;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.5);
+            z-index: 10;
+            overflow-y: auto;
+        }
+        
+        .panel {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
 
-        /* Hlavní tlačítko pro uložení */
-        .btn-primary {
-            background: var(--primary);
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+        
+        /* Tower Buttons */
+        #tower-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .tower-btn {
+            display: flex;
+            align-items: center;
+            background: #334155;
+            border: 2px solid transparent;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .tower-btn:active { transform: scale(0.95); }
+        .tower-btn.selected { 
+            border-color: #3b82f6; 
+            background: #1e293b;
+            box-shadow: inset 0 0 10px rgba(59, 130, 246, 0.2);
+        }
+        .tower-btn.disabled {
+            opacity: 0.5;
+            filter: grayscale(1);
+        }
+
+        .tower-icon {
+            width: 40px; height: 40px;
+            min-width: 40px;
+            display: flex; align-items: center; justify-content: center;
+            background: #0f172a;
+            border-radius: 4px;
+            margin-right: 10px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .wave-btn {
+            background: #ef4444;
             color: white;
             border: none;
-            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.5);
+            padding: 15px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            text-transform: uppercase;
+            margin-top: auto;
+            width: 100%;
+            font-size: 16px;
         }
+        .wave-btn:active { background: #dc2626; }
 
-        .btn-primary:hover {
-            background: var(--primary-dark);
+        /* Floating text */
+        .float-text {
+            position: absolute;
+            pointer-events: none;
+            font-weight: bold;
+            animation: floatUp 1s forwards;
+            text-shadow: 0 1px 2px black;
+            z-index: 50;
+            font-size: 14px;
+        }
+        @keyframes floatUp { to { transform: translateY(-40px); opacity: 0; } }
+
+        /* Modals */
+        #modal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 100;
+        }
+        .modal-content {
+            background: #1e293b;
+            border: 2px solid #ef4444;
+            padding: 20px;
+            text-align: center;
+            max-width: 90%;
             color: white;
+            border-radius: 8px;
+        }
+        .hidden { display: none !important; }
+
+        /* Upgrade Panel */
+        #upgrade-panel {
+            border-color: #f59e0b;
+            display: none;
+        }
+        .upgrade-btn {
+            background: #f59e0b;
+            color: #000;
+            width: 100%;
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-top: 5px;
         }
 
+        /* --- MOBILE RESPONSIVE CSS --- */
+        @media (max-width: 768px) {
+            #game-container { 
+                flex-direction: column; 
+            }
+            
+            #sidebar { 
+                width: 100%; 
+                height: 220px; /* Fixed height for bottom controls */
+                min-height: 220px;
+                flex-direction: row; 
+                flex-wrap: nowrap;
+                overflow-x: auto; /* Scroll horizontally */
+                overflow-y: hidden;
+                border-left: none;
+                border-top: 2px solid #334155;
+                padding: 8px;
+                gap: 8px;
+                order: 2; /* Put sidebar at bottom */
+            }
+
+            canvas {
+                order: 1; /* Put canvas on top */
+                width: 100%;
+                height: calc(100vh - 220px);
+            }
+
+            /* Adjust panels for horizontal layout */
+            .panel {
+                min-width: 140px;
+                height: 100%;
+                margin: 0;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                font-size: 12px;
+            }
+
+            #status-panel {
+                min-width: 130px;
+            }
+
+            #tower-panel-container {
+                flex-grow: 1;
+                overflow-x: auto;
+                display: flex;
+                min-width: 200px;
+            }
+
+            #tower-panel {
+                flex-direction: row;
+                height: 100%;
+                gap: 6px;
+            }
+
+            .tower-btn {
+                flex-direction: column;
+                justify-content: center;
+                text-align: center;
+                width: 75px;
+                height: 100%;
+                padding: 4px;
+                margin: 0;
+                flex-shrink: 0;
+            }
+
+            .tower-icon {
+                margin: 0 0 4px 0;
+                width: 32px; height: 32px;
+            }
+
+            .tower-info .desc { display: none; } /* Hide description to save space */
+            
+            #upgrade-panel {
+                min-width: 140px;
+            }
+            
+            .wave-btn {
+                margin-top: 5px;
+                padding: 8px;
+                font-size: 12px;
+            }
+        }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <div class="card-header"></div>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
         
-        <div class="card-body">
-            <div class="profile-wrapper">
-                <div class="profile-img-placeholder"></div>
+        <div id="sidebar">
+            <!-- Status Panel -->
+            <div class="panel" id="status-panel">
+                <h2 class="text-blue-400 font-bold mb-1 text-sm">STAV</h2>
+                <div class="stat-row"><span>⚡ PENÍZE:</span> <span id="money" class="text-yellow-400 font-mono">150</span></div>
+                <div class="stat-row"><span>❤️ ŽIVOTY:</span> <span id="lives" class="text-red-400 font-mono">20</span></div>
+                <div class="stat-row"><span>🌊 VLNA:</span> <span id="wave" class="text-white font-mono">1</span></div>
+                <button class="text-xs text-slate-400 mt-1 border border-slate-600 px-2 py-1 rounded w-full" onclick="toggleSound()">Zvuk: <span id="sound-status">ZAP</span></button>
             </div>
-            
-            <h1>Jan Novák</h1>
-            <p class="bio">Student VUT | Elektronika & Vývoj</p>
 
-            <div class="actions">
-                <a href="#" class="btn btn-primary">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                    Uložit do kontaktů
-                </a>
+            <!-- Upgrade Panel (Conditional) -->
+            <div id="upgrade-panel" class="panel">
+                <h2 class="text-orange-400 font-bold mb-1 text-sm">UPGRADE</h2>
+                <div class="text-xs text-slate-300 mb-1 truncate" id="upgrade-desc">Věž Lvl 1</div>
+                <div class="stat-row text-xs"><span>Síla:</span> <span id="upg-dmg" class="text-green-400">5</span></div>
+                <div class="stat-row text-xs"><span>Rychlost:</span> <span id="upg-rate" class="text-green-400">40</span></div>
+                <button class="upgrade-btn text-xs" id="btn-upgrade" onclick="upgradeSelected()">
+                    + (<span id="upg-cost">75</span>⚡)
+                </button>
+                <button class="text-xs text-red-400 w-full mt-2 border border-red-900 rounded py-1" onclick="sellSelected()">Prodat (+<span id="sell-cost">25</span>)</button>
+            </div>
 
-                <a href="tel:+420123456789" class="btn">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                    Zavolat (+420 123 456)
-                </a>
-                
-                <a href="mailto:jan@novak.cz" class="btn">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-                    Poslat Email
-                </a>
-                
-                <a href="https://instagram.com" target="_blank" class="btn">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
-                    Instagram
-                </a>
+            <!-- Towers Scroll Container -->
+            <div id="tower-panel-container" class="panel border-none bg-transparent p-0">
+                <div id="tower-panel">
+                    <!-- Resistor -->
+                    <div class="tower-btn" onclick="selectBuildTower(0)" id="btn-0">
+                        <div class="tower-icon" style="color:#60a5fa; border:1px solid #60a5fa;">R</div>
+                        <div class="tower-info">
+                            <div class="font-bold text-xs">Rezistor</div>
+                            <div class="text-xs text-slate-400">50⚡</div>
+                        </div>
+                    </div>
+                    <!-- Transistor -->
+                    <div class="tower-btn" onclick="selectBuildTower(1)" id="btn-1">
+                        <div class="tower-icon" style="color:#a78bfa; border:1px solid #a78bfa;">T</div>
+                        <div class="tower-info">
+                            <div class="font-bold text-xs">Tranzistor</div>
+                            <div class="text-xs text-slate-400">100⚡</div>
+                        </div>
+                    </div>
+                    <!-- Capacitor -->
+                    <div class="tower-btn" onclick="selectBuildTower(2)" id="btn-2">
+                        <div class="tower-icon" style="color:#facc15; border:1px solid #facc15;">C</div>
+                        <div class="tower-info">
+                            <div class="font-bold text-xs">Kondík</div>
+                            <div class="text-xs text-slate-400">200⚡</div>
+                        </div>
+                    </div>
+                    <!-- Transformer -->
+                    <div class="tower-btn" onclick="selectBuildTower(3)" id="btn-3">
+                        <div class="tower-icon" style="color:#34d399; border:1px solid #34d399;">VN</div>
+                        <div class="tower-info">
+                            <div class="font-bold text-xs">Trafo</div>
+                            <div class="text-xs text-slate-400">350⚡</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                 <a href="https://moje-portfolio.cz" target="_blank" class="btn">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-                    Moje webové portfolio
-                </a>
+            <!-- Action Panel -->
+            <div class="panel flex flex-col justify-center" style="min-width: 100px;">
+                <button class="wave-btn" onclick="nextWave()" id="wave-btn">DALŠÍ VLNA</button>
             </div>
         </div>
     </div>
 
+    <!-- Game Over Modal -->
+    <div id="modal" class="hidden">
+        <div class="modal-content">
+            <h2 class="text-3xl font-bold mb-2 text-red-500">ZKRAŤ!</h2>
+            <p class="mb-4 text-slate-300">Obvod byl přetížen.</p>
+            <p class="text-xl mb-6">Skóre (Vlny): <span id="final-wave">0</span></p>
+            <button onclick="restartGame()" class="bg-blue-600 w-full py-3 rounded font-bold text-white text-lg">ZKUSIT ZNOVU</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // --- AUDIO SYSTEM ---
+        const AudioSys = {
+            ctx: null,
+            muted: false,
+            init: function() {
+                if (!this.ctx && !this.muted) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+            },
+            playTone: function(freq, type, duration, vol = 0.1) {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch(e) {}
+            },
+            sfxShoot: function() { this.playTone(400 + Math.random()*200, 'square', 0.05, 0.05); },
+            sfxExplode: function() { this.playTone(100, 'sawtooth', 0.2, 0.1); },
+            sfxBuild: function() { this.playTone(880, 'sine', 0.1, 0.1); },
+            sfxZap: function() { this.playTone(100, 'sawtooth', 0.15, 0.05); }
+        };
+
+        function toggleSound() {
+            AudioSys.muted = !AudioSys.muted;
+            document.getElementById('sound-status').innerText = AudioSys.muted ? "VYP" : "ZAP";
+            if(!AudioSys.muted) AudioSys.init();
+        }
+
+        // --- GAME CONSTANTS ---
+        const GRID_SIZE = 40; 
+        const TOWERS = [
+            { name: 'Rezistor', price: 50, range: 100, damage: 5, rate: 45, color: '#60a5fa', type: 'SLOW', symbol: 'R' },
+            { name: 'Tranzistor', price: 100, range: 140, damage: 12, rate: 12, color: '#a78bfa', type: 'FAST', symbol: 'T' },
+            { name: 'Kondík', price: 200, range: 120, damage: 50, rate: 90, color: '#facc15', type: 'AOE', symbol: 'C' },
+            { name: 'Trafo', price: 350, range: 180, damage: 30, rate: 70, color: '#34d399', type: 'CHAIN', symbol: 'VN' }
+        ];
+
+        // --- STATE ---
+        let width, height;
+        let money = 250;
+        let lives = 20;
+        let wave = 1;
+        let gameActive = true;
+        
+        let map = [];
+        let path = [];
+        let enemies = [];
+        let towers = [];
+        let projectiles = [];
+        let particles = [];
+        
+        let selectedBuildIdx = -1;
+        let selectedMapTower = null;
+        let waveActive = false;
+        let enemiesToSpawn = 0;
+        let spawnTimer = 0;
+
+        // --- INIT & RESIZE ---
+        function resize() {
+            const sidebar = document.getElementById('sidebar');
+            const sidebarHeight = window.innerWidth <= 768 ? 220 : 0;
+            const sidebarWidth = window.innerWidth > 768 ? 300 : 0;
+
+            if(window.innerWidth > 768) {
+                width = window.innerWidth - sidebarWidth;
+                height = window.innerHeight;
+            } else {
+                width = window.innerWidth;
+                height = window.innerHeight - sidebarHeight;
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+
+            // Regenerate level on resize to fit screen
+            // In a real app we might scale, but here we rebuild grid
+            if(gameActive) initGame(false); 
+        }
+        
+        window.addEventListener('resize', resize);
+        
+        function initGame(resetStats = true) {
+            AudioSys.init();
+            if(resetStats) {
+                money = 250;
+                lives = 20;
+                wave = 1;
+            }
+            gameActive = true;
+            enemies = [];
+            towers = []; // Note: Resizing clears towers. Acceptable for prototype.
+            projectiles = [];
+            particles = [];
+            waveActive = false;
+            enemiesToSpawn = 0;
+            selectedBuildIdx = -1;
+            selectedMapTower = null;
+            
+            document.getElementById('modal').classList.add('hidden');
+            generatePath();
+            updateUI();
+        }
+
+        function generatePath() {
+            path = [];
+            const cols = Math.floor(width / GRID_SIZE);
+            const rows = Math.floor(height / GRID_SIZE);
+            
+            map = [];
+            for(let y=0; y<rows; y++) {
+                let row = [];
+                for(let x=0; x<cols; x++) row.push(null);
+                map.push(row);
+            }
+
+            // Simple zig-zag path
+            let r = Math.floor(rows / 2);
+            let c = 0;
+            path.push({c, r, x: c*GRID_SIZE + GRID_SIZE/2, y: r*GRID_SIZE + GRID_SIZE/2});
+
+            let loops = 0;
+            while(c < cols - 1 && loops < 200) {
+                loops++;
+                // Right
+                let steps = Math.floor(Math.random() * 2) + 1;
+                for(let i=0; i<steps && c < cols-1; i++) {
+                    c++;
+                    path.push({c, r, x: c*GRID_SIZE + GRID_SIZE/2, y: r*GRID_SIZE + GRID_SIZE/2});
+                }
+                if(c >= cols-1) break;
+                
+                // Vertical
+                let up = Math.random() > 0.5;
+                if(r <= 1) up = false;
+                if(r >= rows - 2) up = true;
+                
+                let vSteps = Math.floor(Math.random() * 3) + 1;
+                for(let i=0; i<vSteps; i++) {
+                    if(up) r--; else r++;
+                    path.push({c, r, x: c*GRID_SIZE + GRID_SIZE/2, y: r*GRID_SIZE + GRID_SIZE/2});
+                }
+            }
+            
+            path.forEach(p => {
+                if(p.r >= 0 && p.r < rows && p.c >= 0 && p.c < cols)
+                    map[p.r][p.c] = { type: 'PATH' }; 
+            });
+        }
+
+        // --- LOGIC ---
+        function update() {
+            if(!gameActive) return;
+
+            // Spawning
+            if(waveActive && enemiesToSpawn > 0) {
+                spawnTimer++;
+                if(spawnTimer > Math.max(10, 50 - wave)) {
+                    spawnTimer = 0;
+                    spawnEnemy();
+                    enemiesToSpawn--;
+                }
+            } else if (waveActive && enemies.length === 0 && enemiesToSpawn === 0) {
+                waveActive = false;
+                wave++;
+                money += 50 + (wave * 5);
+                updateUI();
+            }
+
+            // Enemies
+            for(let i = enemies.length - 1; i >= 0; i--) {
+                let e = enemies[i];
+                let target = path[e.wp + 1];
+                if(!target) {
+                    lives--;
+                    enemies.splice(i, 1);
+                    AudioSys.playTone(150, 'sawtooth', 0.2);
+                    updateUI();
+                    if(lives <= 0) gameOver();
+                    continue;
+                }
+
+                let dx = target.x - e.x;
+                let dy = target.y - e.y;
+                let dist = Math.hypot(dx, dy);
+                let speed = e.speed * (e.slowed > 0 ? 0.5 : 1);
+                if(e.slowed > 0) e.slowed--;
+
+                if(dist <= speed) {
+                    e.x = target.x; e.y = target.y; e.wp++;
+                } else {
+                    e.x += (dx / dist) * speed; e.y += (dy / dist) * speed;
+                }
+            }
+
+            // Towers
+            towers.forEach(t => {
+                if(t.cooldown > 0) t.cooldown--;
+                if(t.cooldown <= 0) {
+                    let target = null;
+                    let minDist = t.range;
+                    let maxWP = -1;
+
+                    for(let e of enemies) {
+                        let d = Math.hypot(e.x - t.x, e.y - t.y);
+                        if(d <= t.range) {
+                            if(e.wp > maxWP || (e.wp === maxWP && d < minDist)) {
+                                maxWP = e.wp;
+                                minDist = d;
+                                target = e;
+                            }
+                        }
+                    }
+
+                    if(target) {
+                        t.cooldown = t.rate;
+                        shoot(t, target);
+                    }
+                }
+            });
+
+            // Projectiles
+            for(let i = projectiles.length - 1; i >= 0; i--) {
+                let p = projectiles[i];
+                p.life--;
+                
+                if(p.type === 'AOE' || p.type === 'CHAIN') {
+                    if(p.life <= 0) projectiles.splice(i, 1);
+                } else {
+                    let dx = p.target.x - p.x;
+                    let dy = p.target.y - p.y;
+                    let dist = Math.hypot(dx, dy);
+                    let speed = 15;
+
+                    if(dist <= speed || !enemies.includes(p.target)) {
+                        if(enemies.includes(p.target)) hitEnemy(p.target, p.damage, p.effect);
+                        projectiles.splice(i, 1);
+                    } else {
+                        p.x += (dx / dist) * speed;
+                        p.y += (dy / dist) * speed;
+                    }
+                }
+            }
+
+            // Particles
+            for(let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.life -= 0.05;
+                p.x += p.vx;
+                p.y += p.vy;
+                if(p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function spawnEnemy() {
+            let hp = 20 * Math.pow(1.15, wave - 1);
+            let speed = 2 + (wave * 0.05);
+            if(wave % 5 === 0) { hp *= 3; speed *= 0.8; }
+            enemies.push({ x: path[0].x, y: path[0].y, wp: 0, hp: hp, maxHp: hp, speed: speed, slowed: 0, color: wave % 5 === 0 ? '#ef4444' : '#fb923c' });
+        }
+
+        function shoot(tower, target) {
+            let dmg = tower.damage * Math.pow(1.3, tower.level - 1);
+            let effect = tower.type === 'SLOW' ? 'SLOW' : null;
+
+            if(tower.type === 'AOE') {
+                projectiles.push({x: target.x, y: target.y, type: 'AOE', life: 10, radius: 60});
+                AudioSys.sfxExplode();
+                enemies.forEach(e => {
+                    if(Math.hypot(e.x - target.x, e.y - target.y) < 60) hitEnemy(e, dmg, null);
+                });
+            } 
+            else if (tower.type === 'CHAIN') {
+                AudioSys.sfxZap();
+                let chain = [target];
+                let curr = target;
+                let range = 100;
+                let bounces = 3 + tower.level;
+
+                for(let k=0; k<bounces; k++) {
+                    let next = null;
+                    let minD = range;
+                    for(let e of enemies) {
+                        if(!chain.includes(e)) {
+                            let d = Math.hypot(e.x - curr.x, e.y - curr.y);
+                            if(d < minD) { minD = d; next = e; }
+                        }
+                    }
+                    if(next) { chain.push(next); curr = next; } else break;
+                }
+                projectiles.push({ type: 'CHAIN', chain: chain, color: tower.color, life: 10 });
+                chain.forEach(e => hitEnemy(e, dmg, null));
+            }
+            else {
+                AudioSys.sfxShoot();
+                projectiles.push({ x: tower.x, y: tower.y, target: target, damage: dmg, type: 'PROJECTILE', effect: effect, color: tower.color });
+            }
+        }
+
+        function hitEnemy(e, dmg, effect) {
+            e.hp -= dmg;
+            if(effect === 'SLOW') e.slowed = 60;
+            if(e.hp <= 0) {
+                let idx = enemies.indexOf(e);
+                if(idx > -1) {
+                    enemies.splice(idx, 1);
+                    money += 3 + Math.floor(wave / 2);
+                    updateUI();
+                }
+            }
+        }
+
+        // --- INPUT HANDLING ---
+        function handleInput(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+            const c = Math.floor(x / GRID_SIZE);
+            const r = Math.floor(y / GRID_SIZE);
+
+            if(c < 0 || c >= Math.floor(width/GRID_SIZE) || r < 0 || r >= Math.floor(height/GRID_SIZE)) return;
+
+            let clickedTower = towers.find(t => t.c === c && t.r === r);
+            if(clickedTower) {
+                selectMapTower(clickedTower);
+                AudioSys.playTone(600, 'sine', 0.05);
+                return;
+            }
+
+            if(selectedBuildIdx === -1) {
+                selectedMapTower = null;
+                updateUI();
+                return;
+            }
+
+            if(map[r][c] !== null) {
+                showFloatText("OBSAZENO", x, y, '#ef4444');
+                return;
+            }
+
+            const def = TOWERS[selectedBuildIdx];
+            if(money < def.price) {
+                showFloatText("MÁLO PENĚZ", x, y, '#ef4444');
+                return;
+            }
+
+            money -= def.price;
+            let newTower = { c, r, x: c * GRID_SIZE + GRID_SIZE/2, y: r * GRID_SIZE + GRID_SIZE/2, ...def, level: 1, cooldown: 0 };
+            towers.push(newTower);
+            map[r][c] = { type: 'TOWER', ref: newTower };
+            AudioSys.sfxBuild();
+            updateUI();
+        }
+
+        canvas.addEventListener('mousedown', (e) => handleInput(e.clientX, e.clientY));
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Stop scrolling
+            handleInput(e.touches[0].clientX, e.touches[0].clientY);
+        }, {passive: false});
+
+        function selectBuildTower(idx) {
+            selectedMapTower = null;
+            selectedBuildIdx = (selectedBuildIdx === idx) ? -1 : idx;
+            updateUI();
+        }
+
+        function selectMapTower(t) {
+            selectedBuildIdx = -1;
+            selectedMapTower = t;
+            updateUI();
+        }
+
+        function upgradeSelected() {
+            if(!selectedMapTower) return;
+            let cost = Math.floor(selectedMapTower.price * 0.75 * selectedMapTower.level);
+            if(money >= cost) {
+                money -= cost;
+                selectedMapTower.level++;
+                selectedMapTower.range *= 1.1;
+                selectedMapTower.rate *= 0.95;
+                AudioSys.playTone(1200, 'triangle', 0.2);
+                updateUI();
+            }
+        }
+        
+        function sellSelected() {
+            if(!selectedMapTower) return;
+            let value = Math.floor(selectedMapTower.price * 0.5 * selectedMapTower.level);
+            money += value;
+            let idx = towers.indexOf(selectedMapTower);
+            if(idx > -1) towers.splice(idx, 1);
+            map[selectedMapTower.r][selectedMapTower.c] = null;
+            selectedMapTower = null;
+            AudioSys.playTone(300, 'sawtooth', 0.1);
+            updateUI();
+        }
+
+        function nextWave() {
+            if(waveActive) return;
+            waveActive = true;
+            enemiesToSpawn = 5 + Math.floor(wave * 2.5);
+            AudioSys.playTone(400, 'square', 0.3);
+            updateUI();
+        }
+
+        function showFloatText(text, x, y, color) {
+            const rect = canvas.getBoundingClientRect();
+            const el = document.createElement('div');
+            el.className = 'float-text';
+            el.style.left = (x + rect.left) + 'px';
+            el.style.top = (y + rect.top) + 'px';
+            el.style.color = color;
+            el.innerText = text;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 1000);
+        }
+
+        function updateUI() {
+            document.getElementById('money').innerText = money;
+            document.getElementById('lives').innerText = lives;
+            document.getElementById('wave').innerText = wave;
+            
+            // Buttons
+            document.querySelectorAll('#tower-panel .tower-btn').forEach((btn, idx) => {
+                if(idx === selectedBuildIdx) btn.classList.add('selected'); else btn.classList.remove('selected');
+                if(TOWERS[idx].price > money) btn.classList.add('disabled'); else btn.classList.remove('disabled');
+            });
+            
+            // Wave Button
+            const wb = document.getElementById('wave-btn');
+            if(waveActive) {
+                wb.innerText = "BĚŽÍ VLNA..."; wb.style.opacity = 0.5; wb.disabled = true;
+            } else {
+                wb.innerText = "DALŠÍ VLNA"; wb.style.opacity = 1; wb.disabled = false;
+            }
+
+            // Upgrade
+            const upgPanel = document.getElementById('upgrade-panel');
+            if(selectedMapTower) {
+                upgPanel.style.display = 'block';
+                document.getElementById('upgrade-desc').innerText = `${selectedMapTower.name} (Lvl ${selectedMapTower.level})`;
+                let cost = Math.floor(selectedMapTower.price * 0.75 * selectedMapTower.level);
+                let sell = Math.floor(selectedMapTower.price * 0.5 * selectedMapTower.level);
+                let dmg = Math.floor(selectedMapTower.damage * Math.pow(1.3, selectedMapTower.level - 1));
+
+                document.getElementById('upg-dmg').innerText = dmg;
+                document.getElementById('upg-rate').innerText = Math.floor(selectedMapTower.rate);
+                document.getElementById('upg-cost').innerText = cost;
+                document.getElementById('sell-cost').innerText = sell;
+                
+                document.getElementById('btn-upgrade').disabled = (money < cost);
+            } else {
+                upgPanel.style.display = 'none';
+            }
+        }
+
+        function gameOver() {
+            gameActive = false;
+            document.getElementById('final-wave').innerText = wave;
+            document.getElementById('modal').classList.remove('hidden');
+        }
+
+        function restartGame() {
+            initGame(true);
+        }
+
+        // --- RENDER ---
+        function animate() {
+            requestAnimationFrame(animate);
+            update();
+            
+            // Clear
+            ctx.fillStyle = '#0f4c3a'; ctx.fillRect(0, 0, width, height);
+            
+            // Grid
+            ctx.fillStyle = 'rgba(255,255,255,0.1)';
+            for(let x=GRID_SIZE/2; x<width; x+=GRID_SIZE) {
+                for(let y=GRID_SIZE/2; y<height; y+=GRID_SIZE) {
+                    ctx.beginPath(); ctx.arc(x,y,1,0,Math.PI*2); ctx.fill();
+                }
+            }
+
+            // Path
+            ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+            ctx.lineWidth = GRID_SIZE * 0.4;
+            ctx.strokeStyle = '#b8860b'; 
+            ctx.beginPath();
+            if(path.length > 0) {
+                ctx.moveTo(path[0].x, path[0].y);
+                for(let i=1; i<path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+            }
+            ctx.stroke();
+            ctx.lineWidth = GRID_SIZE * 0.1; ctx.strokeStyle = '#ffd700'; ctx.stroke();
+
+            // Selected Tower Range
+            if(selectedMapTower) {
+                ctx.beginPath();
+                ctx.arc(selectedMapTower.x, selectedMapTower.y, selectedMapTower.range, 0, Math.PI*2);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'; ctx.fill();
+                ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+                ctx.strokeRect(selectedMapTower.x - 18, selectedMapTower.y - 18, 36, 36);
+            }
+
+            // Towers
+            towers.forEach(t => {
+                ctx.fillStyle = '#1e293b'; ctx.fillRect(t.x - 15, t.y - 15, 30, 30);
+                ctx.fillStyle = t.color; ctx.beginPath(); ctx.arc(t.x, t.y, 10, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#fff';
+                for(let i=0; i<t.level; i++) ctx.fillRect(t.x - 12 + (i*4), t.y + 12, 3, 3);
+                ctx.fillStyle = '#000'; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(t.symbol, t.x, t.y);
+            });
+
+            // Enemies
+            enemies.forEach(e => {
+                ctx.fillStyle = e.color; ctx.beginPath(); ctx.arc(e.x, e.y, 8, 0, Math.PI*2); ctx.fill();
+                let hpPct = e.hp / e.maxHp;
+                ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(e.x - 10, e.y - 16, 20, 4);
+                ctx.fillStyle = hpPct > 0.5 ? '#22c55e' : '#ef4444'; ctx.fillRect(e.x - 10, e.y - 16, 20 * hpPct, 4);
+            });
+
+            // Projectiles
+            projectiles.forEach(p => {
+                if(p.type === 'AOE') {
+                    ctx.fillStyle = `rgba(250, 204, 21, ${p.life / 10})`;
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI*2); ctx.fill();
+                } else if(p.type === 'CHAIN') {
+                    ctx.beginPath(); ctx.strokeStyle = p.color; ctx.lineWidth = 2;
+                    ctx.moveTo(p.chain[0].x, p.chain[0].y);
+                    for(let i=1; i<p.chain.length; i++) ctx.lineTo(p.chain[i].x, p.chain[i].y);
+                    ctx.stroke();
+                } else {
+                    ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2); ctx.fill();
+                }
+            });
+        }
+
+        // Boot
+        resize();
+        initGame(true);
+        animate();
+
+    </script>
 </body>
 </html>
